@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -43,11 +44,49 @@ type ChangeRoomEvent struct {
 }
 
 // SendMessageHandler will send out a message to all other participants in the chat
-func SendMessageHandler(event Event, c *Client) error {
+func sendMessageHandler(event Event, c *Client) error {
+	// Marshal Payload into wanted format
+	var chatevent SendMessageEvent
+	if err := json.Unmarshal(event.Payload, &chatevent); err != nil {
+		return fmt.Errorf("bad payload in request: %v", err)
+	}
+
+	// Prepare an Outgoing Message to others
+	var broadMessage NewMessageEvent
+
+	broadMessage.Sent = time.Now()
+	broadMessage.Message = chatevent.Message
+	broadMessage.From = chatevent.From
+
+	data, err := json.Marshal(broadMessage)
+	if err != nil {
+		return fmt.Errorf("failed to marshal broadcast message: %v", err)
+	}
+
+	// Place payload into an Event
+	var outgoingEvent Event
+	outgoingEvent.Payload = data
+	outgoingEvent.Type = EventNewMessage
+	// Broadcast to all other Clients
+	for client := range c.manager.Clients {
+		//Only send to clients inside the same chatroom
+		if client.chatroom == c.chatroom {
+			client.egress <- outgoingEvent
+		}
+	}
 	return nil
 }
 
 // ChatRoomHandler will handle switching of chatrooms between clients
-func ChatRoomHandler(event Event, c *Client) error {
+func chatRoomHandler(event Event, c *Client) error {
+	// Marshal Payload into wanted format
+	var changeRoomEvent ChangeRoomEvent
+	if err := json.Unmarshal(event.Payload, &changeRoomEvent); err != nil {
+		return fmt.Errorf("bad payload in request: %v", err)
+	}
+
+	// Add Client to chat room
+	c.chatroom = changeRoomEvent.Name
+
 	return nil
 }

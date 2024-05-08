@@ -57,8 +57,8 @@ func checkOrigin(r *http.Request) bool {
 
 // setupEventHandlers configures and adds all handlers
 func (m *Manager) setupEventHandlers() {
-	m.Handlers[EventSendMessage] = SendMessageHandler
-	m.Handlers[EventChangeRoom] = ChatRoomHandler
+	m.Handlers[EventSendMessage] = sendMessageHandler
+	m.Handlers[EventChangeRoom] = chatRoomHandler
 }
 
 // RouteEvent is used to make sure the correct event goes into the correct handler
